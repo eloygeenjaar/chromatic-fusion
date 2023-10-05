@@ -10,8 +10,8 @@ class BaseArchitecture(nn.Module):
                  num_features: int,
                  *args,
                  **kwargs) -> None:
-        """ This function initializes the base architecture that each of the 
-            encoder and decoder architectures are based on.
+        """ This function initializes the base architecture that 
+            each of the encoder and decoder architectures are based on.
 
         Args:
             input_shape (Union[Tuple[int, int, int], Tuple[int, int, int, int]]): The input shape of the data
@@ -71,7 +71,7 @@ class BaseArchitecture(nn.Module):
             convolutions.
 
         Returns:
-            Union[Tuple[nn.Module, nn.Module], Tuple[None, None]]: The 
+            Union[Tuple[nn.Module, nn.Module], Tuple[None, None]]: The
             two modules that are appropraite for the convolutions of the given
             data.
         """
