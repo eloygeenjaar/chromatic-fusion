@@ -68,12 +68,10 @@ class fBIRNICAFA(BaseDataset):
         fa_data -= self._mean_fa
         fa_data /= self._std_fa
         fa_data[~self._mask_fa] = 0.0
-        print(fa_data[self._mask_fa].min(), fa_data[self._mask_fa].max(), (fa_data == 0.0).sum(), np.product(fa_data.shape))
         fa_data = fa_data[np.newaxis]
         ica_data = ica_data[..., self._comp_ix]
         ica_data = np.transpose(ica_data, (3, 0, 1, 2))
         ica_data -= self._mean_ica
         ica_data /= self._std_ica
         ica_data[~self._mask_ica] = 0.0
-        print(ica_data.min(), ica_data.max())
         return fa_data, ica_data

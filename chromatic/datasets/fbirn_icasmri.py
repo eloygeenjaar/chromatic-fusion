@@ -63,12 +63,10 @@ class fBIRNICAsMRI(BaseDataset):
         smri_data -= self._mean_smri
         smri_data /= self._std_smri
         smri_data[~self._mask_smri] = 0.0
-        print(smri_data[self._mask_smri].min(), smri_data[self._mask_smri].max(), (smri_data == 0.0).sum(), np.product(smri_data.shape))
         smri = smri_data[np.newaxis]
         ica_data = ica_data[..., self._comp_ix]
         ica_data = np.transpose(ica_data, (3, 0, 1, 2))
         ica_data -= self._mean_ica
         ica_data /= self._std_ica
         ica_data[~self._mask_ica] = 0.0
-        print(ica_data.min(), ica_data.max())
         return smri, ica_data

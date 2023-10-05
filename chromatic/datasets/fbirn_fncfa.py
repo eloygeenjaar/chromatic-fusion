@@ -96,7 +96,6 @@ class fBIRNFNCFA(BaseDataset):
         fa_data -= self._mean_fa
         fa_data /= self._std_fa
         fa_data[~self._mask_fa] = 0.0
-        print(fa_data[self._mask_fa].min(), fa_data[self._mask_fa].max(), (fa_data == 0.0).sum(), np.product(fa_data.shape))
         fa_data = fa_data[np.newaxis]
         fnc = fnc[:, self._comp_ix].transpose(1, 0)
         triu_indices = np.triu_indices(53, 1)

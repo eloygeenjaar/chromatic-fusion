@@ -71,11 +71,9 @@ class fBIRNFAsMRI(BaseDataset):
         fa_data -= self._mean_fa
         fa_data /= self._std_fa
         fa_data[~self._mask_fa] = 0.0
-        print(fa_data[self._mask_fa].min(), fa_data[self._mask_fa].max(), (fa_data == 0.0).sum(), np.product(fa_data.shape))
         fa_data = fa_data[np.newaxis]
         smri_data -= self._mean_smri
         smri_data /= self._std_smri
         smri_data[~self._mask_smri] = 0.0
-        print(smri_data[self._mask_smri].min(), smri_data[self._mask_smri].max(), (smri_data == 0.0).sum(), np.product(smri_data.shape))
         smri_data = smri_data[np.newaxis]
         return smri_data, fa_data

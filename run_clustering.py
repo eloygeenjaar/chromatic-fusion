@@ -48,13 +48,20 @@ cluster_selection = {
 }
 
 model_name = 'DMVAE'
-datasets = ['fBIRNICAFA', 'fBIRNFNCsMRI', 'fBIRNFAsMRI', 'fBIRNFNCFA', 'fBIRNICAFNC', 'fBIRNICAsMRI']
-for dataset in datasets:
+datasets = ['fBIRNFNCFA', 'fBIRNFNCsMRI', 'fBIRNICAFNC', 'fBIRNICAFA', 'fBIRNFAsMRI', 'fBIRNICAsMRI']
+dataset_names = ['FAsFNC', 'sMRIsFNC', 'ICAsFNC',
+                 'FAICA', 'FAsMRI', 'sMRIICA']
+robustness_arr = np.zeros((6, len(datasets), 2), dtype=np.int32)
+schizophrenia_arr = np.zeros((6, len(datasets), 2), dtype=np.int32)
+sex_arr = np.zeros((6, len(datasets), 2), dtype=np.int32)
+
+for (d_ix, dataset) in enumerate(datasets):
 
     num_clusters = cluster_selection[dataset]
 
-    # Load the dataframe with the paths and target variablesB
+    # Load the dataframe with the paths and target variables
     info_df = pd.read_csv(Path(f'./info_df_{dataset.lower()}.csv'))
+
     # Load the dataset generator based on the name of the dataset and the dataframe
     dataset_generator = get_dataset_generator(info_df, dataset)
     input_shape = dataset_generator.data_shape
@@ -146,9 +153,6 @@ for dataset in datasets:
             y_all = np.concatenate((y_train, y_valid, y_test), axis=0)
 
             # Perform the clustering
-            #km = KMeansJSD(num_clusters=num_clusters, device=device,
-            #               tol=1E-4, min_steps=10)
-            #km.fit(total_dists)
             km = KMeans(n_clusters=num_clusters, n_init='auto', max_iter=1000, random_state=42)
             km.fit(total_mean)
             assignments = km.predict(total_mean)
@@ -293,6 +297,15 @@ for dataset in datasets:
     print(np.round(np.mean(np.asarray(sex_scores), axis=0), 2))
     print(np.round(np.std(np.asarray(sex_scores), axis=0), 2))
 
+    robustness_arr[:avg_cost.shape[1], d_ix, 0] = np.round(np.mean(avg_cost, axis=0) * 100, 0)
+    robustness_arr[:avg_cost.shape[1], d_ix, 1] = np.round(np.std(avg_cost, axis=0) * 100, 0)
+    schizophrenia_arr[:avg_cost.shape[1], d_ix, 0] = np.round(np.mean(sz_scores, axis=0) * 100, 0)
+    schizophrenia_arr[:avg_cost.shape[1], d_ix, 1] = np.round(np.std(sz_scores, axis=0) * 100, 0)
+    sex_arr[:avg_cost.shape[1], d_ix, 0] = np.round(np.mean(sex_scores, axis=0) * 100, 0)
+    sex_arr[:avg_cost.shape[1], d_ix, 1] = np.round(np.std(sex_scores, axis=0) * 100, 0)
+    
+    print(schizophrenia_arr[:, d_ix])
+
     # Save all embeddings data
     embedding_path = Path(f'embeddings/{dataset}')
     if not embedding_path.is_dir():
@@ -302,12 +315,38 @@ for dataset in datasets:
     subj_assignments.to_csv(embedding_path / 'assignment.csv')
     print('--- Embeddings saved ---')
 
-
     print('Site standard deviations')
     sd_sites = np.zeros((num_clusters,))
     for i in range(num_clusters):
         sd_sites[i] = (((med_sites_df[i] - sz_scores_m[i]) ** 2) * avg_counts.loc[i].values).sum() / avg_counts.loc[i].sum()
     print(np.round(sd_sites, 2))
-    print(avg_counts.round(2).to_markdown())
+    print(avg_counts.round(2))
 
     reassigned_clusters.to_csv(f'assignments/{dataset.lower()}_assignments.csv')
+
+# Generate LaTeX table
+table_string = '\hline\n'
+cluster_info = [(robustness_arr, 'R'), (schizophrenia_arr, 'SZ'), (sex_arr, 'F')]
+for cluster in range(6):
+    for (type_data, type_name) in cluster_info:
+        table_string += f'{cluster}-{type_name} & \n'
+        for (d_ix, dataset_name) in enumerate(dataset_names):
+            table_string += f'\cellcolor{"{"}{dataset_name.lower()}c{cluster}{"}"}'
+            if type_data[cluster, d_ix, 0] == 0:
+                table_string += '- '
+            else:
+                if np.round(schizophrenia_arr[cluster, d_ix, 0], 1) > 70:
+                    table_string += '\\textbf{'
+                table_string += f'{np.round(type_data[cluster, d_ix, 0], 0)}+-{np.round(type_data[cluster, d_ix, 1], 0)}'
+                if np.round(schizophrenia_arr[cluster, d_ix, 0], 1) > 70:
+                    table_string += '}'
+                table_string += ' '
+            # Last dataset
+            if dataset_name == 'sMRIICA':
+                table_string += '\\'
+                table_string += '\\'
+                table_string += '\n'
+            else:
+                table_string += '&\n'
+    table_string += '\hline\n'
+print(table_string)

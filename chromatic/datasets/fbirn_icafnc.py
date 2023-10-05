@@ -18,9 +18,6 @@ class fBIRNICAFNC(BaseDataset):
                  seed: int,
                  num_folds: int,
                  batch_size: int):
-        #self._comp_ix = [50, 53, 11, 5, 24, 6, 9, 41]
-        #self._comp_names = ['CB1', 'CB2', 'SMR', 'THM', 'VIS',
-        #                    'TL', 'SML', 'FRONT']
         self._comp_ix = [84, 45, 88, 96, 61, 62, 66, 67]
         self._comp_names = ['SMA', 'THA', 'MiFG2', 'SFG', 
                             'R IFG', 'MTG2', 'PreCG', 'IFG2']
@@ -95,12 +92,10 @@ class fBIRNICAFNC(BaseDataset):
         ica_data -= self._mean_ica
         ica_data /= self._std_ica
         ica_data[~self._mask_ica] = 0.0
-        print(ica_data.min(), ica_data.max())
         fnc = fnc[:, self._comp_ix_fnc].transpose(1, 0)
         triu_indices = np.triu_indices(53, 1)
         fnc = np.corrcoef(fnc)
         fnc = fnc[triu_indices]
         fnc -= self._mean_fnc
         fnc /= self._std_fnc
-        print(fnc.min(), fnc.max())
         return ica_data, fnc

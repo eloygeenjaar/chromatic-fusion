@@ -1,12 +1,9 @@
-from .generator import CatalystDALIGenericIterator
-
 import nvidia.dali.fn as fn
 import numpy as np
 import pandas as pd
 import nibabel as nb
 import json
 import torch
-import ast
 
 from nvidia.dali.plugin.pytorch import DALIGenericIterator as dgi
 from pathlib import Path
@@ -20,7 +17,7 @@ from catalyst.contrib.utils.pandas import split_dataframe_on_stratified_folds
 class DS(object):
     def __init__(self, num_subjects, mean=None):
         self._num_subjects = num_subjects
-    
+
     def __len__(self):
         return self._num_subjects
 
@@ -28,11 +25,11 @@ class DALIGenericIterator(dgi):
     def __init__(self, pipe, num_subjects, *args, **kwargs):
         super().__init__(pipe, *args, **kwargs)
         self._dataset = DS(num_subjects)
-    
+
     @property
     def dataset(self):
         return self._dataset
-    
+
     @property
     def sampler(self):
         return None
@@ -58,13 +55,12 @@ class BaseDataset(object):
         self._batch_size = batch_size
         self._fold_means = [None] * num_folds
         self._fold_vars = [None] * num_folds
-        
+
         self._dfs = []
-        
+
         # Assume numbers are 32-bit/4 bytes
         self._num_bytes_data = np.product(self.data_shape) * 4
-        
-        
+
         self.generate_numpy_files()
         self._folds = self.create_folds()
         self._pipelines = self.create_pipelines()
@@ -98,18 +94,20 @@ class BaseDataset(object):
             valid_m2 = [paths[1] for paths in valid_subjects]
             
             
-            train_pipe = self.dali_pipeline(batch_size=self._batch_size,
-                                            seed=self._seed,
-                                            m1_paths=train_m1,
-                                            m2_paths=train_m2,
-                                            target_paths=train_targets,
-                                            num_data_bytes=self._num_bytes_data)
-            valid_pipe = self.dali_pipeline(batch_size=self._batch_size,
-                                            seed=self._seed,
-                                            m1_paths=valid_m1,
-                                            m2_paths=valid_m2,
-                                            target_paths=valid_targets,
-                                            num_data_bytes=self._num_bytes_data)
+            train_pipe = self.dali_pipeline(
+                batch_size=self._batch_size,
+                seed=self._seed,
+                m1_paths=train_m1,
+                m2_paths=train_m2,
+                target_paths=train_targets,
+                num_data_bytes=self._num_bytes_data)
+            valid_pipe = self.dali_pipeline(
+                batch_size=self._batch_size,
+                seed=self._seed,
+                m1_paths=valid_m1,
+                m2_paths=valid_m2,
+                target_paths=valid_targets,
+                num_data_bytes=self._num_bytes_data)
             if test_subjects and test_targets:
                 test_m1 = [paths[0] for paths in test_subjects]
                 test_m2 = [paths[1] for paths in test_subjects]
@@ -168,18 +166,6 @@ class BaseDataset(object):
     def dataframes(self):
         return self._dfs
     
-    @property
-    def dataloaders(self):
-        return self._dataloaders
-    
-    @property
-    def fold_means(self):
-        return self._fold_means
-    
-    @property
-    def fold_vars(self):
-        return self._fold_vars
-    
     def static_preprocess(self, data):
         raise NotImplementedError
     
@@ -215,13 +201,13 @@ class BaseDataset(object):
             if data.itemsize > 4:
                 data = data.astype(np.float32)
         else:
-            raise NotImplementedError(f'Dtype {data.dtype} of numpy array {orig_path} is not supported')
+            raise NotImplementedError(f'Dtype {data.dtype} is not supported')
         return data
-    
+
     def _check_numpy_files(self, all_subjects):
         to_be_generated = [(p, idc) for (p, idc) in all_subjects if not self._file_check(p)]
         return to_be_generated
-    
+
     def _create_data_file(self, orig_paths: Path, new_paths: Path):
         # Create symlink if file is already numpy file
         data_ls = []
@@ -254,13 +240,10 @@ class BaseDataset(object):
 
     def _create_target_file(self, new_path: Path, y):
         target_df = self._info_df[self._target_names].copy()
-        # This command creates a Numpy array that can be indexed into like a pandas dataframe/dictionary
-        # The first line creates a list of tuples for each of the rows in the dataframe and casts it to a numpy array
-        #targets = np.array(list(target_df.itertuples(index=False)),
-        #                   # This line makes sure that the dtypes are named after the columns in the df, which allows
-        #                   # for the indexing based on the column names. It zips the column names + the dtype per column
-        #                   # to make sure everything is cast correctly when the file is saved.
-        #                   dtype=list(zip(list(target_df), target_df.dtypes)))
+        # This command creates a Numpy array that can be indexed into 
+        # like a pandas dataframe/dictionary
+        # The first line creates a list of tuples for each of the rows 
+        # in the dataframe and casts it to a numpy array
         np.save(new_path, y)
     def _create_content_file(self, orig_path: Path, new_path: Path, idc):
         file_content_dict = {
@@ -269,10 +252,10 @@ class BaseDataset(object):
             'data_shape': self.data_shape,
             'idc': str(idc)
         }
-        
+
         with new_path.open('w') as f:
             json.dump(file_content_dict, f)
-        
+
     def generate_numpy_files(self):
         all_subjects = [(self._numpy_root / Path(str(idc)), idc) for idc in self._info_df['idc']]
         to_be_generated = self._check_numpy_files(all_subjects)
@@ -291,7 +274,6 @@ class BaseDataset(object):
             self._create_target_file(target_path, y)
             self._create_content_file(orig_files, file_content_path, idc)
         
-        # TODO: Clean this up, this can be done more elegantly
         for (subject_path, idc) in all_subjects:  
             m1_path = str((subject_path / Path('m1.npy')).resolve())
             m2_path = str((subject_path / Path('m2.npy')).resolve())
@@ -301,7 +283,7 @@ class BaseDataset(object):
             
     def create_folds(self) -> List[Dict[str, Tuple[List, List]]]:
         self._num_subjects = []
-        
+
         if self.num_folds == 0:
             self._info_df['fold'] = 0
         else:
@@ -312,9 +294,8 @@ class BaseDataset(object):
             train_df = self._info_df.loc[self._info_df['fold'] != 0, :].copy()
             test_df = self._info_df.loc[self._info_df['fold'] == 0, :].copy()
         self._info_df['targets'] = self._info_df[self._main_target]
-        
+
         folds = []
-        
         if self.num_folds == 0:
             train_df = self._info_df.loc[self._info_df['fold'] == 0, :].copy()
             x_train, x_val, _, _ = train_test_split(train_df, train_df['targets'], train_size=0.9, 
@@ -332,13 +313,14 @@ class BaseDataset(object):
                            'valid': len(cur_fold['valid'][0]),
                            'test': len(cur_fold['test'][0])}
             self._num_subjects.append(num_subject)
-            
-            
+
+
         for fold in range(self.num_folds):
             train_df = self._info_df.loc[self._info_df['fold'] != fold, :].copy()
             x_test = self._info_df.loc[self._info_df['fold'] == fold, :].copy()
-            x_train, x_val, _, _ = train_test_split(train_df, train_df['targets'], train_size=0.9, 
-                                                    random_state=self._seed, stratify=train_df['targets'])
+            x_train, x_val, _, _ = train_test_split(
+                train_df, train_df['targets'], train_size=0.9, 
+                random_state=self._seed, stratify=train_df['targets'])
             self._dfs.append({
                 'train': x_train,
                 'valid': x_val,
@@ -355,8 +337,8 @@ class BaseDataset(object):
                            'valid': len(cur_fold['valid'][0]),
                            'test': len(cur_fold['test'][0])}
             self._num_subjects.append(num_subject)
-        
+
         if hasattr(self, '_calc_fold_statistics'):
             self._calc_fold_statistics(folds)
-        
+
         return folds

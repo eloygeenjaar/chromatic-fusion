@@ -90,7 +90,6 @@ class fBIRNFNCsMRI(BaseDataset):
         smri_data -= self._mean_smri
         smri_data /= self._std_smri
         smri_data[~self._mask_smri] = 0.0
-        print(smri_data[self._mask_smri].min(), smri_data[self._mask_smri].max(), (smri_data == 0.0).sum(), np.product(smri_data.shape))
         smri = smri_data[np.newaxis]
         fnc = fnc[:, self._comp_ix].transpose(1, 0)
         triu_indices = np.triu_indices(53, 1)

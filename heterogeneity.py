@@ -6,16 +6,24 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-datasets = ['fBIRNFNCFA', 'fBIRNFNCsMRI', 'fBIRNFAsMRI', 'fBIRNICAFNC', 'fBIRNICAFA', 'fBIRNICAsMRI']
+datasets = ['fBIRNFNCFA', 'fBIRNFNCsMRI', 'fBIRNICAFNC', 'fBIRNICAFA', 'fBIRNFAsMRI', 'fBIRNICAsMRI']
 
 important_clusters = {
     'fBIRNFNCFA': [3],
-    'fBIRNFNCsMRI': [1],
-    'fBIRNFAsMRI': [1],
+    'fBIRNFNCsMRI': [0],
     'fBIRNICAFNC': [2],
     'fBIRNICAFA': [1, 4],
+    'fBIRNFAsMRI': [2],
     'fBIRNICAsMRI': [4]
 }
+
+names = np.array([
+    'FA-sFNC MCP-3',
+    'sMRI-sFNC MCP-0',
+    'ICA-sFNC MCP-2',
+    'FA-ICA MCP-1', 'FA-ICA MCP-4',
+    'sMRI-FA MCP-2',
+    'sMRI-ICA MCP-4'])
 
 dfs = {dataset: None for dataset in datasets}
 for dataset in datasets:
@@ -74,27 +82,18 @@ for dataset_i in datasets:
                     df_j.set_index('idc', inplace=True)
                     sz_mask_j = df_j.loc[subjects_j, 'sz'].values
                     subjects_j = set(np.asarray(subjects_j)[sz_mask_j].tolist())
-                    # Calculate the overlap between the schizophrenia subjects
-                    subjects_i_and_j = subjects_i.union(subjects_j)
-                    enriched_arr[i, j, fold] = np.round((len(subjects_i_and_j) - len(subjects_j)) / len(subjects_i) * 100, 1)
-                    perc_arr[i, j, fold] = np.round(len(subjects_i.union(subjects_j)) / sz_accounted_for_num[fold], 2) * 100
+                    # Find the subjects only in the row cluster
+                    subjects_i_not_j = subjects_i.difference(subjects_j)
+                    # Calculate the percentage of subjects in the row cluster
+                    # that are not in the column cluster
+                    perc_arr[i, j, fold] = len(subjects_i_not_j) / len(subjects_i) * 100
                 j += 1
         i += 1
 
 
-names = np.array(['FA-sFNC-MCP-3', 'sMRI-sFNC-MCP-1', 'sMRI-FA-MCP-1', 'ICA-sFNC-MCP-2', 'FA-ICA-MCP-1', 'FA-ICA-MCP-4', 'sMRI-ICA-MCP-4'])
 enriched_arr = enriched_arr.mean(-1)
-perc_arr = perc_arr.mean(-1)
-#ixs = np.argsort(-enriched_arr.sum(-1))
-ixs = np.argsort(np.diagonal(perc_arr))
-print(ixs.shape)
-# Swap rows based on sort
-perc_arr[:, :] = perc_arr[:, ixs]
-perc_arr[:] = perc_arr[ixs]
-enriched_arr[:, :] = enriched_arr[:, ixs]
-enriched_arr[:] = enriched_arr[ixs]
-enriched_arr[np.eye(7, dtype=bool)] = np.diagonal(perc_arr)
+perc_arr = np.round(perc_arr.mean(-1), 0)
 fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-sns.heatmap(enriched_arr, cmap='hot', square=True, xticklabels=names[ixs], yticklabels=names[ixs], annot=True, ax=ax, fmt='g')
+sns.heatmap(perc_arr, cmap='hot', square=True, xticklabels=names, yticklabels=names, annot=True, ax=ax, fmt='g', cbar_kws={"shrink": 0.8})
 plt.tight_layout()
 plt.savefig('overlap.png', dpi=400)

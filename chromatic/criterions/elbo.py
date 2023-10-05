@@ -8,15 +8,13 @@ class ELBO(BaseCriterion):
     def __init__(self,
                  dataset: str,
                  beta: float,
-                 prior_dist: D.Distribution,
-                 use_mse_loss: bool):
+                 prior_dist: D.Distribution):
         super().__init__()
 
         self._dataset = dataset
         self._beta = beta
         self._prior_dist = prior_dist
         self._kl_weight = 0.0
-        self._use_mse_loss = use_mse_loss
         self._mse_loss = nn.MSELoss(reduction='none')
 
     def forward(self, m1, m2, model_results):
