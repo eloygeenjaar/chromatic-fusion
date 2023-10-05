@@ -140,8 +140,6 @@ for dataset in datasets:
     corrs_mean = np.mean(corrs, axis=1)
     print(corrs_mean)
 
-    print('---')
-    print(corrs_mean[similarity_mean > 0.8])
     np.save(f'shared_analysis/{dataset.lower()}_similarity.npy', similarity_mean)
     np.save(f'shared_analysis/{dataset.lower()}_correlations.npy', corrs_mean)
     np.save(f'shared_analysis/{dataset.lower()}_minmax.npy', minmax)
